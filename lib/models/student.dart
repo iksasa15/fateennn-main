@@ -1,37 +1,51 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Student {
-  String? userId; // رقم المستخدم (كـ نص)
-  String? name; // اسم الطالب
-  String? major; // تخصص الطالب
-  String? email; // البريد الإلكتروني
-  String? password; // الرقم السري
+  String? userId;
+  String? name;
+  String? major;
+  String? email;
 
-  // الوظائف لإضافة البيانات
-  void addUserId(String id) {
-    userId = id;
+  Student({this.userId, this.name, this.major, this.email});
+
+  // تحويل البيانات إلى Map لحفظها في Firestore
+  Map<String, dynamic> toMap() {
+    return {
+      'userId': userId,
+      'name': name,
+      'major': major,
+      'email': email,
+    };
   }
 
-  void addName(String studentName) {
-    name = studentName;
+  // إنشاء كائن `Student` من بيانات Firestore
+  factory Student.fromMap(Map<String, dynamic> data) {
+    return Student(
+      userId: data['userId'],
+      name: data['name'],
+      major: data['major'],
+      email: data['email'],
+    );
   }
 
-  void addMajor(String studentMajor) {
-    major = studentMajor;
+  // حفظ بيانات الطالب في Firestore
+  Future<void> saveToFirestore() async {
+    await FirebaseFirestore.instance
+        .collection('students')
+        .doc(userId)
+        .set(toMap());
   }
 
-  void addEmail(String studentEmail) {
-    email = studentEmail;
-  }
+  // البحث عن طالب في Firestore باستخدام `userId`
+  static Future<Student?> getStudentById(String userId) async {
+    var doc = await FirebaseFirestore.instance
+        .collection('students')
+        .doc(userId)
+        .get();
 
-  void addPassword(String studentPassword) {
-    password = studentPassword;
-  }
-
-  // وظيفة اختيارية لعرض معلومات الطالب
-  void displayInfo() {
-    print('رقم المستخدم: $userId');
-    print('اسم الطالب: $name');
-    print('التخصص: $major');
-    print('البريد الإلكتروني: $email');
-    print('الرقم السري: $password');
+    if (doc.exists) {
+      return Student.fromMap(doc.data()!);
+    }
+    return null;
   }
 }

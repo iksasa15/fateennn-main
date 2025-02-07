@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "381666460426",
+    "project_id": "fateen-17a39",
+    "storage_bucket": "fateen-17a39.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:381666460426:android:0331993465c2eb6fbf30f3",
+        "android_client_info": {
+          "package_name": "com.example.fateen"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAU996YH7gi9BoST8PYXIm5eX0QXDpAsC4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
