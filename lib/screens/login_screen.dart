@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'home_screen.dart'; // استيراد صفحة الرئيسية
-import 'signup_screen.dart'; // استيراد صفحة التسجيل
-import 'package:fateen/models/student.dart'; // استيراد كلاس الطالب
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'home_screen.dart';
+import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,32 +14,57 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  void loginUser() {
-    // التحقق من البريد الإلكتروني وكلمة المرور
-    final email = emailController.text;
-    final password = passwordController.text;
+  Future<void> loginUser() async {
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
 
-    // البحث عن المستخدم في قائمة المستخدمين
-    final matchedUser = usersList.firstWhere(
-      (user) =>
-          user.email == email && user.password == password, // مطابقة البيانات
-      orElse: () => Student(), // إذا لم يتم العثور على المستخدم
-    );
+    if (email.isNotEmpty && password.isNotEmpty) {
+      try {
+        // تسجيل الدخول باستخدام Firebase Authentication
+        UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
 
-    if (matchedUser.email != null) {
-      // إذا تم العثور على المستخدم، الانتقال إلى الصفحة الرئيسية
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => HomeScreen(userName: matchedUser.name ?? ''),
-        ),
-      );
+        // جلب بيانات المستخدم من Firestore
+        DocumentSnapshot userDoc = await _firestore
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .get();
+
+        if (userDoc.exists) {
+          String userName = userDoc['name'];
+
+          // الانتقال إلى الصفحة الرئيسية
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => HomeScreen(userName: userName),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('❌ لم يتم العثور على بيانات المستخدم'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ فشل تسجيل الدخول: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } else {
-      // إذا لم يتم العثور على المستخدم، عرض رسالة خطأ
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('البريد الإلكتروني أو كلمة المرور غير صحيحة'),
+          content: Text('❌ يرجى إدخال البريد الإلكتروني وكلمة المرور'),
           backgroundColor: Colors.red,
         ),
       );
@@ -56,134 +82,73 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const SizedBox(height: 100),
-              // عنوان تسجيل الدخول
               const Center(
                 child: Text(
                   'تسجيل الدخول',
                   style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black),
                 ),
               ),
               const SizedBox(height: 10),
               const Text(
                 'أهلاً بك في فطين!',
                 style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black54,
-                ),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black54),
               ),
               const SizedBox(height: 40),
-
-              // حقل البريد الإلكتروني
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 6,
-                      offset: Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  controller: emailController,
-                  decoration: const InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(vertical: 15),
-                    border: InputBorder.none,
-                    hintText: 'البريد الإلكتروني',
-                    prefixIcon: Icon(Icons.email, color: Colors.blue),
-                  ),
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'البريد الإلكتروني',
+                  prefixIcon: Icon(Icons.email, color: Colors.blue),
                 ),
               ),
               const SizedBox(height: 20),
-
-              // حقل كلمة المرور
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 6,
-                      offset: Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  controller: passwordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(vertical: 15),
-                    border: InputBorder.none,
-                    hintText: 'كلمة المرور',
-                    prefixIcon: Icon(Icons.lock, color: Colors.blue),
-                  ),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'كلمة المرور',
+                  prefixIcon: Icon(Icons.lock, color: Colors.blue),
                 ),
               ),
               const SizedBox(height: 30),
-
-              // زر تسجيل الدخول
-              GestureDetector(
-                onTap: loginUser,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.blue,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.blueAccent.withOpacity(0.4),
-                        blurRadius: 8,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'تسجيل الدخول',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+              ElevatedButton(
+                onPressed: loginUser,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 50, vertical: 12),
+                  textStyle: const TextStyle(fontSize: 18),
                 ),
+                child: const Text('تسجيل الدخول',
+                    style: TextStyle(color: Colors.white)),
               ),
               const SizedBox(height: 20),
-
-              // نص تسجيل حساب جديد
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
-                    'ليس لديك حساب؟ ',
-                    style: TextStyle(fontSize: 16, color: Colors.black54),
-                  ),
+                  const Text('ليس لديك حساب؟ ',
+                      style: TextStyle(fontSize: 16, color: Colors.black54)),
                   GestureDetector(
                     onTap: () {
-                      // الانتقال إلى صفحة التسجيل
                       Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SignUpScreen(),
-                        ),
-                      );
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const SignUpScreen()));
                     },
                     child: const Text(
                       'أنشئ حساباً جديداً',
                       style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.blue,
-                        fontWeight: FontWeight.bold,
-                      ),
+                          fontSize: 16,
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
